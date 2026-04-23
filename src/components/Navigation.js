@@ -37,7 +37,7 @@ function SettingsIcon() {
 export default function Navigation({ entryOpen, onToggleEntry, onNavigate }) {
   const { state, dispatch } = useApp();
   const go = (view) => {
-    onNavigate?.();
+    onNavigate?.(view);
     dispatch({ type: 'SET_VIEW', view });
   };
 

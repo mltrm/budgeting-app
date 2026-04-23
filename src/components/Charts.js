@@ -164,7 +164,7 @@ function AreaTooltip({ active, payload, label }) {
   `;
 }
 
-export default function Charts({ onCreateExpense }) {
+export default function Charts({ onCreateExpense, onOpenExpenses }) {
   const { state } = useApp();
   const [period, setPeriod] = useState('month');
   const [offset, setOffset] = useState(0);
@@ -243,6 +243,22 @@ export default function Charts({ onCreateExpense }) {
   }, [monthlyData, state.categories, hiddenCats]);
 
   const rangeLabel = useMemo(() => getRangeLabel(period, range), [period, range]);
+
+  function buildDrilldownPreset(extra = {}) {
+    return {
+      search: extra.search || '',
+      category: extra.category || '',
+      minAmount: extra.minAmount || '',
+      maxAmount: extra.maxAmount || '',
+      dateFrom: range ? range.start.toISOString().slice(0, 10) : '',
+      dateTo: range ? range.end.toISOString().slice(0, 10) : '',
+      sortBy: extra.sortBy || 'recent'
+    };
+  }
+
+  function openExpenseDrilldown(extra = {}) {
+    onOpenExpenses?.(buildDrilldownPreset(extra));
+  }
 
   if (state.expenses.length === 0) {
     return html`
@@ -329,6 +345,15 @@ export default function Charts({ onCreateExpense }) {
           <p className="mb-1 text-[12px] leading-[18px] font-semibold text-[#999999]">Transactions</p>
           <p className="text-[24px] leading-[1.1] font-bold text-black">${filteredExpenses.filter(e => !hiddenCats.has(e.category)).length}</p>
         </div>
+      </div>
+
+      <div className="flex items-center justify-end mb-5">
+        <button
+          onClick=${() => openExpenseDrilldown()}
+          className="rounded-full border border-[#e5e5e5] bg-white px-4 py-2.5 text-[12px] font-semibold text-black"
+        >
+          View expenses
+        </button>
       </div>
 
       ${period !== 'all' && html`
@@ -422,11 +447,15 @@ export default function Charts({ onCreateExpense }) {
             <//>
             <div className="flex-1 space-y-2 min-w-0">
               ${topCategories.map(({ name, total, cat }) => html`
-                <div key=${name} className="flex items-center gap-2">
+                <button
+                  key=${name}
+                  onClick=${() => openExpenseDrilldown({ category: name })}
+                  className="w-full flex items-center gap-2 rounded-[14px] px-2 py-2 text-left transition-colors hover:bg-[#f7f7f7]"
+                >
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style=${{ backgroundColor: cat?.color || '#9ca3af' }}></span>
                   <span className="text-[13px] text-[#243532] flex-1 min-w-0 truncate">${name}</span>
                   <span className="text-[12px] font-semibold text-[#999999]">${totalSpend > 0 ? Math.round(total / totalSpend * 100) : 0}%</span>
-                </div>
+                </button>
               `)}
             </div>
           </div>

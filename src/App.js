@@ -23,6 +23,7 @@ export default function App() {
   const [detailExpenseId, setDetailExpenseId] = useState(null);
   const [editingExpenseId, setEditingExpenseId] = useState(null);
   const [entryDraft, setEntryDraft] = useState(null);
+  const [listPreset, setListPreset] = useState(null);
 
   const editingExpense = useMemo(
     () => state.expenses.find((expense) => expense.id === editingExpenseId) || null,
@@ -54,6 +55,12 @@ export default function App() {
 
   function closeDetail() {
     setDetailExpenseId(null);
+  }
+
+  function openFilteredList(preset) {
+    closeEntry();
+    closeDetail();
+    setListPreset(preset);
   }
 
   function openCreateEntry() {
@@ -109,6 +116,9 @@ export default function App() {
                   onEditExpense=${openEditEntry}
                   onCreateExpense=${openCreateEntry}
                   onQuickAdd=${openDraftEntry}
+                  onOpenExpenses=${openFilteredList}
+                  filterPreset=${listPreset}
+                  onFilterPresetApplied=${() => setListPreset(null)}
                 />
               `}
         </main>
@@ -117,9 +127,10 @@ export default function App() {
       <${Navigation}
         entryOpen=${entryOpen}
         onToggleEntry=${() => (entryOpen ? closeEntry() : openCreateEntry())}
-        onNavigate=${() => {
+        onNavigate=${(view) => {
           closeEntry();
           closeDetail();
+          if (view === 'list') setListPreset(null);
         }}
       />
 

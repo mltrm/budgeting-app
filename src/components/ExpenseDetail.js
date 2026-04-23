@@ -122,6 +122,43 @@ export default function ExpenseDetail({ expenseId, onBack, onEdit, onSelectExpen
                     value=${expense.description}
                   />
                 `}
+                ${expense.receipt && html`
+                  <div className="py-4">
+                    <p className="text-[12px] leading-[18px] text-[#999999] font-semibold mb-3">Receipt</p>
+                    <div className="rounded-[16px] border border-[#eef2ef] bg-[#fafafa] p-4">
+                      ${expense.receipt.type?.startsWith('image/') && html`
+                        <img
+                          src=${expense.receipt.dataUrl}
+                          alt=${expense.receipt.name || 'Receipt'}
+                          className="mb-4 w-full rounded-[12px] border border-[#eef2ef] object-cover"
+                        />
+                      `}
+                      ${!expense.receipt.type?.startsWith('image/') && html`
+                        <div className="mb-4 flex items-center gap-3 rounded-[12px] border border-[#eef2ef] bg-white p-4">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#f3f3f3] text-black">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 2v6h6"/>
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-black">${expense.receipt.name || 'Receipt.pdf'}</p>
+                            <p className="mt-1 text-xs text-[#999999]">PDF receipt</p>
+                          </div>
+                        </div>
+                      `}
+                      <a
+                        href=${expense.receipt.dataUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download=${expense.receipt.name || 'receipt'}
+                        className="inline-flex rounded-full bg-black px-4 py-2.5 text-[12px] font-semibold text-white"
+                      >
+                        Open receipt
+                      </a>
+                    </div>
+                  </div>
+                `}
               </div>
             </div>
 

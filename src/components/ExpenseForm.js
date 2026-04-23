@@ -26,6 +26,7 @@ export default function ExpenseForm({ editExpense, draftExpense, onDone }) {
   const [supplier, setSupplier] = useState(baseExpense?.supplier || null);
   const [category, setCategory] = useState(baseExpense?.category || null);
   const [description, setDescription] = useState(baseExpense?.description || '');
+  const [receipt, setReceipt] = useState(baseExpense?.receipt || null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function ExpenseForm({ editExpense, draftExpense, onDone }) {
     setSupplier(next?.supplier || null);
     setCategory(next?.category || null);
     setDescription(next?.description || '');
+    setReceipt(next?.receipt || null);
     setError('');
   }, [editExpense, draftExpense]);
 
@@ -45,6 +47,21 @@ export default function ExpenseForm({ editExpense, draftExpense, onDone }) {
   const handleAddCategory = useCallback((name) => {
     dispatch({ type: 'ADD_CATEGORY', name });
   }, [dispatch]);
+
+  function handleReceiptChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReceipt({
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        dataUrl: reader.result
+      });
+    };
+    reader.readAsDataURL(file);
+  }
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -71,6 +88,7 @@ export default function ExpenseForm({ editExpense, draftExpense, onDone }) {
       supplier,
       category,
       description: description.trim(),
+      receipt,
       created_at: editExpense?.created_at || Date.now()
     };
 
@@ -137,6 +155,34 @@ export default function ExpenseForm({ editExpense, draftExpense, onDone }) {
             placeholder="What was this for?"
             className=${inputClass}
           />
+        <//>
+
+        <${Field} label="Receipt" note="Optional photo or PDF">
+          <div className="rounded-[16px] border border-[#eef2ef] bg-white p-4">
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              onChange=${handleReceiptChange}
+              className="block w-full text-sm text-[#666666] file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            />
+            ${receipt && html`
+              <div className="mt-4 rounded-[16px] border border-[#eef2ef] bg-[#fafafa] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-black truncate">${receipt.name}</p>
+                    <p className="mt-1 text-xs text-[#999999]">${receipt.type.startsWith('image/') ? 'Image attached' : 'PDF attached'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick=${() => setReceipt(null)}
+                    className="shrink-0 rounded-full border border-[#e5e5e5] px-3 py-1.5 text-[12px] font-semibold text-black"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            `}
+          </div>
         <//>
 
         <div className="grid grid-cols-2 gap-3 pt-2">

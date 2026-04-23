@@ -1,10 +1,10 @@
 import { html } from 'htm/react';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../context.js';
 import { formatDate, formatCurrency } from '../utils.js';
 import SupplierAvatar from './SupplierAvatar.js';
 
-export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExpense }) {
+export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExpense, filterPreset, onFilterPresetApplied }) {
   const { state, dispatch } = useApp();
   const [deleteId, setDeleteId] = useState(null);
   const [swipedId, setSwipedId] = useState(null);
@@ -15,6 +15,20 @@ export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExp
   const [maxAmount, setMaxAmount] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+
+  useEffect(() => {
+    if (!filterPreset) return;
+
+    setSearch(filterPreset.search || '');
+    setFilterCat(filterPreset.category || '');
+    setMinAmount(filterPreset.minAmount != null ? String(filterPreset.minAmount) : '');
+    setMaxAmount(filterPreset.maxAmount != null ? String(filterPreset.maxAmount) : '');
+    setDateFrom(filterPreset.dateFrom || '');
+    setDateTo(filterPreset.dateTo || '');
+    setSortBy(filterPreset.sortBy || 'recent');
+    onFilterPresetApplied?.();
+  }, [filterPreset, onFilterPresetApplied]);
 
   const categoryMap = useMemo(() => {
     const map = {};
@@ -44,8 +58,19 @@ export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExp
     if (maxAmount) list = list.filter((expense) => expense.amount <= Number(maxAmount));
     if (dateFrom) list = list.filter((expense) => expense.date >= dateFrom);
     if (dateTo) list = list.filter((expense) => expense.date <= dateTo);
+    if (sortBy === 'oldest') {
+      list.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.created_at || 0) - (b.created_at || 0);
+      });
+    } else if (sortBy === 'highest') {
+      list.sort((a, b) => b.amount - a.amount || b.date.localeCompare(a.date));
+    } else if (sortBy === 'lowest') {
+      list.sort((a, b) => a.amount - b.amount || b.date.localeCompare(a.date));
+    }
+
     return list;
-  }, [state.expenses, search, filterCat, minAmount, maxAmount, dateFrom, dateTo]);
+  }, [state.expenses, search, filterCat, minAmount, maxAmount, dateFrom, dateTo, sortBy]);
 
   const total = useMemo(() => filtered.reduce((sum, expense) => sum + expense.amount, 0), [filtered]);
 
@@ -121,13 +146,35 @@ export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExp
             `)}
           </div>
 
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            ${[
+              { key: 'recent', label: 'Recent' },
+              { key: 'oldest', label: 'Oldest' },
+              { key: 'highest', label: 'Highest' },
+              { key: 'lowest', label: 'Lowest' }
+            ].map((option) => html`
+              <button
+                key=${option.key}
+                onClick=${() => setSortBy(option.key)}
+                className=${`h-8 rounded-full px-4 text-[12px] font-semibold whitespace-nowrap transition-colors ${
+                  sortBy === option.key ? 'bg-black text-white' : 'bg-white text-black'
+                }`}
+              >
+                ${option.label}
+              </button>
+            `)}
+          </div>
+
           ${filtered.length > 0 && html`
             <div className="rounded-[16px] border border-[#eef2ef] bg-white px-4 py-4 flex items-center justify-between">
               <div>
                 <p className="mb-1 text-[12px] leading-[18px] font-semibold text-[#999999]">Visible total</p>
                 <p className="text-[28px] leading-[1.1] font-bold text-black">${formatCurrency(total)}</p>
               </div>
-              <p className="text-[12px] leading-[18px] font-semibold text-[#999999]">${filtered.length} expense${filtered.length !== 1 ? 's' : ''}</p>
+              <div className="text-right">
+                <p className="text-[12px] leading-[18px] font-semibold text-[#999999]">${filtered.length} expense${filtered.length !== 1 ? 's' : ''}</p>
+                <p className="text-[11px] leading-[16px] text-[#999999] capitalize">${sortBy}</p>
+              </div>
             </div>
           `}
 
