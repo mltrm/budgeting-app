@@ -3,6 +3,7 @@ import { saveData, loadData } from './db.js';
 import { syncToFile, loadFromFile, getToken, signOut as driveSignOut } from './googleDrive.js';
 import { DEFAULT_CATEGORIES, CATEGORY_COLORS } from './data/defaults.js';
 import { buildSeedExpenses, buildSeedSuppliers, EXTRA_CATEGORIES } from './data/seedData.js';
+import { GOOGLE_CLIENT_ID } from './config.js';
 
 function genId() { return crypto.randomUUID(); }
 
@@ -21,8 +22,9 @@ const initialState = {
   categories: makeDefaultCategories(),
   loaded: false,
   view: 'home',
+  user: null,
   drive: {
-    clientId: localStorage.getItem('gdrive_client_id') || '',
+    clientId: GOOGLE_CLIENT_ID,
     connected: false,
     syncing: false,
     lastSync: null,
@@ -106,6 +108,12 @@ function reducer(state, action) {
     }
     case 'DELETE_CATEGORY':
       return { ...state, categories: state.categories.filter(c => c.id !== action.id) };
+
+    case 'SET_USER':
+      return { ...state, user: action.user };
+    case 'SIGN_OUT':
+      driveSignOut();
+      return { ...state, user: null, drive: { ...state.drive, connected: false, lastSync: null } };
 
     case 'SET_VIEW':
       return { ...state, view: action.view };

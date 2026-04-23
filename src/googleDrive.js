@@ -1,10 +1,11 @@
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const SCOPES = 'openid profile email https://www.googleapis.com/auth/drive.appdata';
 const FILE_NAME = 'budget-tracker-data.json';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 let tokenClient = null;
 let accessToken = null;
+let userInfo = null;
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -39,12 +40,23 @@ export async function initAndSignIn(clientId) {
 }
 
 export function getToken() { return accessToken; }
+export function getUserInfo() { return userInfo; }
+
+export async function fetchUserInfo() {
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch user info');
+  userInfo = await res.json();
+  return userInfo;
+}
 
 export function signOut() {
   if (accessToken && window.google?.accounts?.oauth2) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
   accessToken = null;
+  userInfo = null;
 }
 
 async function driveRequest(url, options = {}) {

@@ -2,11 +2,11 @@ import { html } from 'htm/react';
 import { useRef, useState } from 'react';
 import { useApp } from '../context.js';
 import { initAndSignIn } from '../googleDrive.js';
+import { GOOGLE_CLIENT_ID } from '../config.js';
 import { formatCurrency } from '../utils.js';
 
 export default function Settings() {
   const { state, dispatch, driveSyncNow, driveLoadNow } = useApp();
-  const [clientIdInput, setClientIdInput] = useState(state.drive.clientId);
   const [connecting, setConnecting] = useState(false);
   const [tab, setTab] = useState('categories');
   const [newCat, setNewCat] = useState('');
@@ -18,12 +18,9 @@ export default function Settings() {
   const importInputRef = useRef(null);
 
   async function connectDrive() {
-    const id = clientIdInput.trim();
-    if (!id) return;
     setConnecting(true);
-    dispatch({ type: 'SET_DRIVE_CLIENT_ID', clientId: id });
     try {
-      await initAndSignIn(id);
+      await initAndSignIn(GOOGLE_CLIENT_ID);
       dispatch({ type: 'SET_DRIVE_CONNECTED', connected: true });
       await driveLoadNow();
     } catch (err) {
@@ -112,6 +109,26 @@ export default function Settings() {
         </div>
       </div>
 
+      <!-- Account -->
+      ${state.user && html`
+        <div className="bg-white rounded-[16px] border border-[#eef2ef] p-4 mb-5 flex items-center gap-3">
+          ${state.user.picture
+            ? html`<img src=${state.user.picture} className="w-10 h-10 rounded-full flex-shrink-0" alt="avatar" />`
+            : html`<div className="w-10 h-10 rounded-full bg-[#1B5E52] flex items-center justify-center text-white font-semibold flex-shrink-0">${(state.user.name || state.user.email || '?')[0].toUpperCase()}</div>`
+          }
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-black truncate">${state.user.name || 'Google User'}</p>
+            <p className="text-xs text-[#999999] truncate">${state.user.email || ''}</p>
+          </div>
+          <button
+            onClick=${() => dispatch({ type: 'SIGN_OUT' })}
+            className="text-xs font-semibold text-red-500 px-3 py-1.5 rounded-xl border border-red-100 hover:bg-red-50 flex-shrink-0"
+          >
+            Sign out
+          </button>
+        </div>
+      `}
+
       <!-- Google Drive sync -->
       <section className="mb-5">
         <h2 className="text-[16px] leading-6 font-semibold text-black mb-3 flex items-center gap-2">
@@ -152,29 +169,13 @@ export default function Settings() {
           `
           : html`
             <div className="bg-white border border-[#eef2ef] rounded-[16px] p-4">
-              <p className="text-xs text-[#999999] mb-3">
-                Sync data across devices via Google Drive. Requires a Google OAuth Client ID.
-                <br/>
-                <a href="https://console.cloud.google.com/" target="_blank" rel="noopener" className="text-black underline">Set up at Google Cloud Console →</a>
+              <p className="text-xs text-[#999999] mb-4">
+                Back up and sync your data across devices via Google Drive.
               </p>
-              <div className="space-y-2">
-                <input type="text" value=${clientIdInput} onInput=${e => setClientIdInput(e.target.value)}
-                  placeholder="Paste your Google OAuth Client ID..."
-                  className="w-full rounded-[16px] border border-[#eef2ef] bg-white px-4 py-3 text-xs text-black focus:outline-none" />
-                <button onClick=${connectDrive} disabled=${!clientIdInput.trim() || connecting}
-                  className="w-full py-3 bg-black text-white text-sm font-medium rounded-[16px] disabled:opacity-50">
-                  ${connecting ? 'Connecting…' : 'Connect Google Drive'}
-                </button>
-              </div>
-              <details className="mt-3">
-                <summary className="text-xs text-[#999999] cursor-pointer">Setup instructions</summary>
-                <ol className="mt-2 space-y-1 text-xs text-[#999999] list-decimal list-inside">
-                  <li>Google Cloud Console → Create project → Enable Drive API</li>
-                  <li>Create OAuth 2.0 credentials (Web application type)</li>
-                  <li>Add <code className="bg-gray-100 px-1 rounded">http://localhost:8000</code> to Authorized JavaScript origins</li>
-                  <li>Serve this app: <code className="bg-gray-100 px-1 rounded">python3 -m http.server 8000</code></li>
-                </ol>
-              </details>
+              <button onClick=${connectDrive} disabled=${connecting}
+                className="w-full py-3 bg-black text-white text-sm font-semibold rounded-[16px] disabled:opacity-50">
+                ${connecting ? 'Connecting…' : 'Connect Google Drive'}
+              </button>
             </div>
           `
         }

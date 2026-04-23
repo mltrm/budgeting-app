@@ -8,6 +8,7 @@ import Settings from './components/Settings.js';
 import Home from './components/Home.js';
 import ExpenseForm from './components/ExpenseForm.js';
 import ExpenseDetail from './components/ExpenseDetail.js';
+import LoginScreen from './components/LoginScreen.js';
 
 const VIEWS = {
   home: Home,
@@ -27,6 +28,10 @@ export default function App() {
     () => state.expenses.find((expense) => expense.id === editingExpenseId) || null,
     [state.expenses, editingExpenseId]
   );
+
+  if (!state.user) {
+    return html`<${LoginScreen} />`;
+  }
 
   if (!state.loaded) {
     return html`
