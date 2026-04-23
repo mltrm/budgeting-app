@@ -2,7 +2,7 @@ import { html } from 'htm/react';
 import { useState, useMemo } from 'react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, AreaChart, Area
+  Tooltip, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 import { useApp } from '../context.js';
 import { buildMonthlyChartData, formatCurrency, getMonthKey, getMonthLabel, formatShortDate } from '../utils.js';
@@ -400,16 +400,35 @@ export default function Charts({ onCreateExpense }) {
 
       ${topCategories.length > 0 && html`
         <div className="bg-white rounded-[16px] border border-[#eef2ef] p-4 mb-5">
-          <p className="text-[16px] leading-6 font-semibold text-black mb-3">Top categories</p>
-          <div className="space-y-2.5">
-            ${topCategories.map(({ name, total, cat }) => html`
-              <div key=${name} className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style=${{ backgroundColor: cat?.color || '#9ca3af' }}></span>
-                <span className="text-[14px] text-[#243532] flex-1 min-w-0 truncate">${name}</span>
-                <span className="text-[14px] font-semibold text-black">${formatCurrency(total)}</span>
-                <span className="text-[12px] text-[#999999] w-10 text-right">${totalSpend > 0 ? Math.round(total / totalSpend * 100) : 0}%</span>
-              </div>
-            `)}
+          <p className="text-[16px] leading-6 font-semibold text-black mb-4">Breakdown by category</p>
+          <div className="flex items-center gap-4">
+            <${ResponsiveContainer} width=${160} height=${160}>
+              <${PieChart}>
+                <${Pie}
+                  data=${topCategories}
+                  dataKey="total"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius=${48}
+                  outerRadius=${72}
+                  strokeWidth=${0}
+                >
+                  ${topCategories.map(({ name, cat }) => html`
+                    <${Cell} key=${name} fill=${cat?.color || '#9ca3af'} />
+                  `)}
+                <//>
+              <//>
+            <//>
+            <div className="flex-1 space-y-2 min-w-0">
+              ${topCategories.map(({ name, total, cat }) => html`
+                <div key=${name} className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style=${{ backgroundColor: cat?.color || '#9ca3af' }}></span>
+                  <span className="text-[13px] text-[#243532] flex-1 min-w-0 truncate">${name}</span>
+                  <span className="text-[12px] font-semibold text-[#999999]">${totalSpend > 0 ? Math.round(total / totalSpend * 100) : 0}%</span>
+                </div>
+              `)}
+            </div>
           </div>
         </div>
       `}

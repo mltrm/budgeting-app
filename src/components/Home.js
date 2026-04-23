@@ -125,6 +125,62 @@ export default function Home({ onExpenseClick }) {
   const graphData = useMemo(() => buildMonthDays(state.expenses, activeMonth), [activeMonth, state.expenses]);
   const monthTotal = useMemo(() => activeExpenses.reduce((sum, expense) => sum + expense.amount, 0), [activeExpenses]);
 
+  const dailyAvg = useMemo(() => {
+    if (!activeMonth || activeExpenses.length === 0) return 0;
+    const [year, month] = activeMonth.split('-').map(Number);
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === year && now.getMonth() + 1 === month;
+    const days = isCurrentMonth ? now.getDate() : new Date(year, month, 0).getDate();
+    return monthTotal / days;
+  }, [activeMonth, activeExpenses, monthTotal]);
+
+  const insights = useMemo(() => {
+    if (activeExpenses.length === 0) return [];
+    const cards = [];
+
+    // Daily avg
+    if (dailyAvg > 0) {
+      cards.push({ id: 'daily', label: 'Daily average', value: formatCurrency(dailyAvg), sub: 'per day this month', bg: '#f0f7ff' });
+    }
+
+    // vs last month
+    if (activeMonth) {
+      const [year, month] = activeMonth.split('-').map(Number);
+      const prevDate = new Date(year, month - 2, 1);
+      const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      const prevTotal = (expensesByMonth[prevKey] || []).reduce((s, e) => s + e.amount, 0);
+      if (prevTotal > 0) {
+        const pct = Math.round(((monthTotal - prevTotal) / prevTotal) * 100);
+        cards.push({ id: 'vs', label: 'vs last month', value: `${pct >= 0 ? '+' : ''}${pct}%`, sub: pct >= 0 ? 'more spending' : 'less spending', bg: pct >= 0 ? '#fff0f0' : '#f0fff4', color: pct >= 0 ? '#ef4444' : '#16a34a' });
+      }
+    }
+
+    // Top category
+    const byCat = {};
+    activeExpenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+    const topCat = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+    if (topCat) {
+      const cat = state.categories.find(c => c.name === topCat[0]);
+      cards.push({ id: 'top_cat', label: 'Top category', value: topCat[0], sub: formatCurrency(topCat[1]), bg: (cat?.color || '#999') + '18', color: cat?.color });
+    }
+
+    // Biggest single expense
+    const biggest = [...activeExpenses].sort((a, b) => b.amount - a.amount)[0];
+    if (biggest) {
+      cards.push({ id: 'biggest', label: 'Biggest expense', value: formatCurrency(biggest.amount), sub: biggest.supplier || '—', bg: '#fff8f0' });
+    }
+
+    // Most frequent supplier
+    const bySupplier = {};
+    activeExpenses.forEach(e => { if (e.supplier) bySupplier[e.supplier] = (bySupplier[e.supplier] || 0) + 1; });
+    const topSupplier = Object.entries(bySupplier).sort((a, b) => b[1] - a[1])[0];
+    if (topSupplier && topSupplier[1] >= 2) {
+      cards.push({ id: 'frequent', label: 'Most visited', value: topSupplier[0], sub: `${topSupplier[1]}× this month`, bg: '#f5f0ff' });
+    }
+
+    return cards;
+  }, [activeExpenses, monthTotal, dailyAvg, activeMonth, expensesByMonth, state.categories]);
+
   const budgetRows = useMemo(() => {
     return state.categories
       .filter(c => c.budget > 0)
@@ -157,6 +213,7 @@ export default function Home({ onExpenseClick }) {
       <div className="max-w-2xl mx-auto">
         <p className="mb-1 text-[12px] leading-[18px] font-semibold text-[#999999]">Total spent</p>
         <h1 className="text-[34px] leading-[1.1] font-bold text-black">${formatCurrency(monthTotal)}</h1>
+        ${dailyAvg > 0 && html`<p className="mt-1 text-[13px] font-semibold text-[#999999]">${formatCurrency(dailyAvg)} / day avg</p>`}
 
         <div className="mt-8 h-[170px] -mx-4">
           ${graphData.length > 1 && html`
@@ -176,6 +233,24 @@ export default function Home({ onExpenseClick }) {
           `}
         </div>
       </div>
+
+      ${insights.length > 0 && html`
+        <div className="mt-5 -mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1" style=${{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
+            ${insights.map(card => html`
+              <div
+                key=${card.id}
+                className="flex-shrink-0 rounded-[20px] p-4"
+                style=${{ minWidth: '155px', background: card.bg, scrollSnapAlign: 'start' }}
+              >
+                <p className="text-[11px] font-semibold text-[#999999] mb-1.5">${card.label}</p>
+                <p className="text-[20px] leading-tight font-bold truncate" style=${{ color: card.color || '#000000' }}>${card.value}</p>
+                <p className="text-[11px] text-[#999999] mt-1">${card.sub}</p>
+              </div>
+            `)}
+          </div>
+        </div>
+      `}
 
       ${monthKeys.length > 0 && html`
         <div className="sticky top-0 z-20 -mx-4 mt-4 bg-[#f5f5f5]/95 px-4 py-3 backdrop-blur-sm">
@@ -257,25 +332,32 @@ export default function Home({ onExpenseClick }) {
                   ${section.expenses.map((expense) => {
                     const category = categoryMap[expense.category];
                     return html`
-                      <button
-                        key=${expense.id}
-                        onClick=${() => onExpenseClick?.(expense.id)}
-                        className="w-full rounded-[16px] border border-[#eef2ef] bg-white px-[15px] py-[15px] text-left"
-                      >
-                        <div className="flex items-start gap-3">
-                          <${SupplierAvatar} name=${expense.supplier} size=${44} />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[16px] leading-6 font-semibold text-[#243532]">${expense.supplier || 'Unknown supplier'}</p>
-                            <p className="truncate text-[12px] leading-[18px] font-semibold text-[#999999]">${formatDate(expense.date)}</p>
-                          </div>
-                          <div className="pl-3 text-right">
-                            <p className="whitespace-nowrap text-[16px] leading-6 font-semibold text-[#243532]">${formatCurrency(expense.amount)}</p>
-                            <p className="whitespace-nowrap text-[12px] leading-[18px] font-semibold" style=${{ color: category?.color || '#999999' }}>
-                              ${expense.category || 'Uncategorized'}
-                            </p>
-                          </div>
+                      <div key=${expense.id} className="rounded-[16px] border border-[#eef2ef] bg-white px-[15px] py-[15px]">
+                        <div className="flex items-center gap-3">
+                          <button onClick=${() => onExpenseClick?.(expense.id)} className="flex-1 text-left flex items-center gap-3 min-w-0">
+                            <${SupplierAvatar} name=${expense.supplier} size=${44} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[16px] leading-6 font-semibold text-[#243532]">${expense.supplier || 'Unknown supplier'}</p>
+                              <p className="truncate text-[12px] leading-[18px] font-semibold text-[#999999]">${formatDate(expense.date)}</p>
+                            </div>
+                            <div className="pl-2 text-right flex-shrink-0">
+                              <p className="whitespace-nowrap text-[16px] leading-6 font-semibold text-[#243532]">${formatCurrency(expense.amount)}</p>
+                              <p className="whitespace-nowrap text-[12px] leading-[18px] font-semibold" style=${{ color: category?.color || '#999999' }}>
+                                ${expense.category || 'Uncategorized'}
+                              </p>
+                            </div>
+                          </button>
+                          <button
+                            onClick=${() => onQuickAdd?.({ supplier: expense.supplier, category: expense.category, description: expense.description, amount: expense.amount, date: new Date().toISOString().slice(0, 10) })}
+                            className="w-8 h-8 rounded-full bg-[#f3f3f3] flex items-center justify-center flex-shrink-0"
+                            aria-label="Add again"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <path d="M12 4v16M4 12h16"/>
+                            </svg>
+                          </button>
                         </div>
-                      </button>
+                      </div>
                     `;
                   })}
                 </div>

@@ -1,5 +1,5 @@
 import { html } from 'htm/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context.js';
 import { formatDate, formatCurrency } from '../utils.js';
 import SupplierAvatar from './SupplierAvatar.js';
@@ -7,6 +7,8 @@ import SupplierAvatar from './SupplierAvatar.js';
 export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExpense }) {
   const { state, dispatch } = useApp();
   const [deleteId, setDeleteId] = useState(null);
+  const [swipedId, setSwipedId] = useState(null);
+  const swipeStartX = useRef(null);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [minAmount, setMinAmount] = useState('');
@@ -129,6 +131,10 @@ export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExp
             </div>
           `}
 
+          ${swipedId && html`
+            <div className="fixed inset-0 z-10" onClick=${() => setSwipedId(null)}></div>
+          `}
+
           ${filtered.length === 0 ? html`
             <div className="rounded-[16px] border border-[#eef2ef] bg-white py-16 text-center text-[#999999]">
               <p className="text-base">${state.expenses.length === 0 ? 'No expenses yet.' : 'No expenses match this filter.'}</p>
@@ -162,41 +168,60 @@ export default function ExpenseList({ onExpenseClick, onEditExpense, onCreateExp
             <div className="space-y-3">
               ${filtered.map((expense) => {
                 const category = categoryMap[expense.category];
+                const swiped = swipedId === expense.id;
                 return html`
-                  <div key=${expense.id} className="rounded-[16px] border border-[#eef2ef] bg-white px-[15px] py-[15px]">
-                    <div className="flex items-start gap-3">
-                      <button onClick=${() => onExpenseClick(expense.id)} className="flex-1 text-left flex items-start gap-3">
-                        <${SupplierAvatar} name=${expense.supplier} size=${44} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-[16px] leading-6 font-semibold text-[#243532]">${expense.supplier || 'Unknown supplier'}</p>
-                              <p className="mt-1 text-[12px] leading-[18px] font-semibold text-[#999999]">${formatDate(expense.date)}</p>
-                            </div>
-                            <span className="whitespace-nowrap text-[16px] leading-6 font-semibold text-[#243532]">${formatCurrency(expense.amount)}</span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between gap-3 flex-wrap">
-                            <span className="text-[12px] leading-[18px] font-semibold" style=${{ color: category?.color || '#999999' }}>
-                              ${expense.category || 'Uncategorized'}
-                            </span>
-                            ${expense.description && html`<span className="truncate text-[12px] leading-[18px] font-medium text-[#999999]">${expense.description}</span>`}
-                          </div>
-                        </div>
+                  <div
+                    key=${expense.id}
+                    className="relative rounded-[16px] overflow-hidden"
+                    onTouchStart=${(e) => { swipeStartX.current = e.touches[0].clientX; }}
+                    onTouchEnd=${(e) => {
+                      if (swipeStartX.current === null) return;
+                      const dx = e.changedTouches[0].clientX - swipeStartX.current;
+                      if (dx < -55) setSwipedId(expense.id);
+                      else if (dx > 20) setSwipedId(null);
+                      swipeStartX.current = null;
+                    }}
+                  >
+                    <!-- Red delete zone revealed on swipe -->
+                    <div className="absolute right-0 top-0 bottom-0 w-20 bg-red-500 flex items-center justify-center rounded-r-[16px]">
+                      <button
+                        onClick=${() => { dispatch({ type: 'DELETE_EXPENSE', id: expense.id }); setSwipedId(null); }}
+                        className="flex flex-col items-center gap-1 text-white"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/>
+                        </svg>
+                        <span className="text-[10px] font-semibold">Delete</span>
                       </button>
+                    </div>
 
-                      <div className="flex flex-col gap-2 pl-1">
-                        <button onClick=${() => onEditExpense(expense.id)} className="w-9 h-9 rounded-full bg-[#f3f3f3] text-black flex items-center justify-center" aria-label="Edit expense">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                          </svg>
+                    <!-- Row content (slides left on swipe) -->
+                    <div
+                      className="bg-white border border-[#eef2ef] rounded-[16px] px-[15px] py-[15px] transition-transform duration-200"
+                      style=${{ transform: swiped ? 'translateX(-80px)' : 'translateX(0)' }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button onClick=${() => { setSwipedId(null); onExpenseClick(expense.id); }} className="flex-1 text-left flex items-start gap-3">
+                          <${SupplierAvatar} name=${expense.supplier} size=${44} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-[16px] leading-6 font-semibold text-[#243532]">${expense.supplier || 'Unknown supplier'}</p>
+                                <p className="mt-1 text-[12px] leading-[18px] font-semibold text-[#999999]">${formatDate(expense.date)}</p>
+                              </div>
+                              <span className="whitespace-nowrap text-[16px] leading-6 font-semibold text-[#243532]">${formatCurrency(expense.amount)}</span>
+                            </div>
+                            <div className="mt-1 flex items-center justify-between gap-3 flex-wrap">
+                              <span className="text-[12px] leading-[18px] font-semibold" style=${{ color: category?.color || '#999999' }}>
+                                ${expense.category || 'Uncategorized'}
+                              </span>
+                              ${expense.description && html`<span className="truncate text-[12px] leading-[18px] font-medium text-[#999999]">${expense.description}</span>`}
+                            </div>
+                          </div>
                         </button>
-                        <button onClick=${() => setDeleteId(expense.id)} className="w-9 h-9 rounded-full bg-[#f3f3f3] text-[#999999] flex items-center justify-center" aria-label="Delete expense">
+                        <button onClick=${() => onEditExpense(expense.id)} className="w-9 h-9 rounded-full bg-[#f3f3f3] text-black flex items-center justify-center flex-shrink-0" aria-label="Edit">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 6h18"/>
-                            <path d="M8 6V4h8v2"/>
-                            <path d="M19 6l-1 14H6L5 6"/>
-                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>
                           </svg>
                         </button>
                       </div>
