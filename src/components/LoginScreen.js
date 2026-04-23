@@ -5,8 +5,9 @@ import { useApp } from '../context.js';
 import { GOOGLE_CLIENT_ID } from '../config.js';
 
 export default function LoginScreen() {
-  const { dispatch } = useApp();
+  const { dispatch, driveLoadNow } = useApp();
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
   async function handleSignIn() {
@@ -15,12 +16,18 @@ export default function LoginScreen() {
     try {
       dispatch({ type: 'SET_DRIVE_CLIENT_ID', clientId: GOOGLE_CLIENT_ID });
       await initAndSignIn(GOOGLE_CLIENT_ID);
+
+      setStatus('Loading your data…');
+      dispatch({ type: 'SET_DRIVE_CONNECTED', connected: true });
+      await driveLoadNow();
+
       const user = await fetchUserInfo();
       dispatch({ type: 'SET_USER', user });
     } catch (err) {
       setError('Sign-in failed. Please try again.');
     } finally {
       setLoading(false);
+      setStatus('');
     }
   }
 
@@ -74,7 +81,7 @@ export default function LoginScreen() {
         >
           ${loading
             ? html`<div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin"></div>
-                   <span className="text-sm font-semibold text-gray-700">Signing in…</span>`
+                   <span className="text-sm font-semibold text-gray-700">${status || 'Signing in…'}</span>`
             : html`
               <svg width="22" height="22" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
