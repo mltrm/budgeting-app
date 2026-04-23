@@ -108,6 +108,13 @@ function reducer(state, action) {
     }
     case 'DELETE_CATEGORY':
       return { ...state, categories: state.categories.filter(c => c.id !== action.id) };
+    case 'SET_CATEGORY_BUDGET':
+      return {
+        ...state,
+        categories: state.categories.map(c =>
+          c.id === action.id ? { ...c, budget: action.budget } : c
+        )
+      };
 
     case 'SET_USER':
       return { ...state, user: action.user };

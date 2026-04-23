@@ -125,6 +125,18 @@ export default function Home({ onExpenseClick }) {
   const graphData = useMemo(() => buildMonthDays(state.expenses, activeMonth), [activeMonth, state.expenses]);
   const monthTotal = useMemo(() => activeExpenses.reduce((sum, expense) => sum + expense.amount, 0), [activeExpenses]);
 
+  const budgetRows = useMemo(() => {
+    return state.categories
+      .filter(c => c.budget > 0)
+      .map(c => {
+        const spent = activeExpenses
+          .filter(e => e.category === c.name)
+          .reduce((s, e) => s + e.amount, 0);
+        return { ...c, spent, pct: Math.min(100, Math.round((spent / c.budget) * 100)) };
+      })
+      .sort((a, b) => b.pct - a.pct);
+  }, [state.categories, activeExpenses]);
+
   const feedSections = useMemo(() => {
     return loadedMonths
       .map((monthKey) => ({
@@ -185,6 +197,36 @@ export default function Home({ onExpenseClick }) {
                 `;
               })}
             </div>
+          </div>
+        </div>
+      `}
+
+      ${budgetRows.length > 0 && html`
+        <div className="max-w-2xl mx-auto mt-3 mb-3">
+          <h2 className="text-[16px] leading-6 font-semibold text-black mb-3">Budgets</h2>
+          <div className="bg-white rounded-[20px] border border-[#eef2ef] px-4 py-3 space-y-3">
+            ${budgetRows.map(row => html`
+              <div key=${row.id}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style=${{ backgroundColor: row.color }}></span>
+                    <span className="text-[13px] font-semibold text-black">${row.name}</span>
+                  </div>
+                  <span className="text-[12px] font-medium" style=${{ color: row.pct >= 100 ? '#ef4444' : row.pct >= 80 ? '#f59e0b' : '#999999' }}>
+                    ${formatCurrency(row.spent)} / ${formatCurrency(row.budget)}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style=${{
+                      width: `${row.pct}%`,
+                      backgroundColor: row.pct >= 100 ? '#ef4444' : row.pct >= 80 ? '#f59e0b' : row.color
+                    }}
+                  ></div>
+                </div>
+              </div>
+            `)}
           </div>
         </div>
       `}

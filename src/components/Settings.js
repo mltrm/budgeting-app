@@ -241,12 +241,11 @@ export default function Settings() {
           </div>
           <div className="space-y-1.5">
             ${state.categories.map(cat => html`
-              <div key=${cat.id} className="flex items-center gap-3 bg-white rounded-[16px] border border-[#eef2ef] px-3 py-3">
-                <span className="w-3 h-3 rounded-full flex-shrink-0" style=${{ backgroundColor: cat.color }}></span>
-                <span className="text-sm text-black flex-1">${cat.name}</span>
-                ${cat.is_default
-                  ? html`<span className="text-xs text-[#999999]">default</span>`
-                  : html`
+              <div key=${cat.id} className="bg-white rounded-[16px] border border-[#eef2ef] px-3 py-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style=${{ backgroundColor: cat.color }}></span>
+                  <span className="text-sm text-black flex-1">${cat.name}</span>
+                  ${!cat.is_default && html`
                     <button
                       onClick=${() => setDeleteConfirm({ id: cat.id, name: cat.name, type: 'category' })}
                       className="text-[#999999] transition-colors p-1"
@@ -255,8 +254,26 @@ export default function Settings() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                       </svg>
                     </button>
-                  `
-                }
+                  `}
+                </div>
+                <div className="flex items-center gap-2 mt-2 pl-5">
+                  <span className="text-xs text-[#999999] flex-shrink-0">Monthly budget</span>
+                  <div className="flex items-center gap-1 ml-auto">
+                    <input
+                      type="number"
+                      min="0"
+                      step="10"
+                      value=${cat.budget || ''}
+                      onInput=${e => {
+                        const val = parseFloat(e.target.value);
+                        dispatch({ type: 'SET_CATEGORY_BUDGET', id: cat.id, budget: isNaN(val) ? null : val });
+                      }}
+                      placeholder="No limit"
+                      className="w-24 text-right rounded-xl border border-[#eef2ef] bg-gray-50 px-2 py-1 text-xs text-black focus:outline-none focus:border-[#1B5E52]"
+                    />
+                    <span className="text-xs text-[#999999]">€</span>
+                  </div>
+                </div>
               </div>
             `)}
           </div>
