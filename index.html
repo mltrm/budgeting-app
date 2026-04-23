@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budgeting App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } }
+        }
+      }
+    }
+  </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react":           "https://esm.sh/react@18.2.0",
+      "react/":          "https://esm.sh/react@18.2.0/",
+      "react-dom/client":"https://esm.sh/react-dom@18.2.0/client",
+      "htm/react":       "https://esm.sh/htm@3.1.1/react?deps=react@18.2.0",
+      "recharts":        "https://esm.sh/recharts@2.12.7?deps=react@18.2.0,react-dom@18.2.0",
+      "uuid":            "https://esm.sh/uuid@9.0.1"
+    }
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif; overflow: hidden; height: 100dvh; background: #f3f1ed; }
+    #root { height: 100dvh; overflow: hidden; }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; }
+    .dropdown-scroll::-webkit-scrollbar { width: 4px; }
+    .dropdown-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Modal sheet animation */
+    .modal-sheet {
+      transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .modal-sheet.closed { transform: translateY(100%); }
+    .modal-sheet.open   { transform: translateY(0); }
+
+    /* Modal overlay animation */
+    .modal-overlay {
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-overlay.closed { opacity: 0; }
+
+    /* FAB icon spin */
+    .fab-icon {
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .fab-icon.rotated { transform: rotate(45deg); }
+
+    /* Slide-in views */
+    .slide-in { animation: slideInRight 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    .slide-up { animation: slideUp 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div id="root"></div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
